@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import random
 import math
-import config # Importa para pegar o raio de detecção
+import config
 
 class Environment:
     def __init__(self):
@@ -15,48 +15,43 @@ class Environment:
 
     def setup_smart_targets(self, count=50, area_size=20):
         """
-        Gera pontos respeitando a regra de não aglomeração.
-        - count: Total de pontos (50)
-        - area_size: Tamanho do mapa (aumentado para caber 50 pontos espalhados)
+        Gera esferas (targets) respeitando a regra de não aglomeração.
         """
-        visual_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.2, 0.2, 0.2], rgbaColor=[1, 0, 0, 1])
-        collision_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.2, 0.2, 0.2])
+        # MUDANÇA AQUI: Trocamos GEOM_BOX por GEOM_SPHERE
+        # radius=0.15 deixa elas menores e mais fáceis de desviar
+        visual_shape = p.createVisualShape(p.GEOM_SPHERE, radius=0.15, rgbaColor=[1, 0, 0, 1])
+        collision_shape = p.createCollisionShape(p.GEOM_SPHERE, radius=0.15)
 
         created_count = 0
-        max_attempts = 5000 # Evita travar se não tiver espaço
+        max_attempts = 5000 
         attempts = 0
 
         while created_count < count and attempts < max_attempts:
             attempts += 1
             
-            # 1. Gera candidato aleatório
             x = random.uniform(-area_size, area_size)
             y = random.uniform(-area_size, area_size)
-            candidate_pos = [x, y, 0.5]
+            # z=0.15 para a esfera ficar 'apoiada' no chão, e não flutuando muito alto
+            candidate_pos = [x, y, 0.15]
 
-            # 2. Verifica vizinhos próximos (Regra da Aglomeração)
             neighbors_in_range = 0
             too_close = False
 
             for t in self.targets:
                 dist = self.get_distance(candidate_pos, t['pos'])
                 
-                # Regra A: Distância mínima física (para não sobrepor caixas)
-                if dist < 1.0: 
+                # Regra A: Distância mínima física (menor agora que são esferas pequenas)
+                if dist < 0.35: 
                     too_close = True
                     break
                 
-                # Regra B: Contagem de vizinhos dentro do raio de detecção
+                # Regra B: Contagem de vizinhos
                 if dist <= config.DETECTION_RADIUS:
                     neighbors_in_range += 1
 
-            # SE tiver muito perto de alguém OU se já tiver 2 vizinhos nessa área (Totalizaria 3 com ele)
-            # A sua regra: "Não pode haver 3 pontos detectados juntos" (Total 4)
-            # Vamos ser conservadores: Se já tem 2 vizinhos, não coloca o terceiro.
             if too_close or neighbors_in_range >= 2:
-                continue # Pula essa tentativa e tenta outro lugar
+                continue 
 
-            # 3. Se passou nos testes, cria o objeto
             body_id = p.createMultiBody(baseMass=0, 
                                         baseCollisionShapeIndex=collision_shape, 
                                         baseVisualShapeIndex=visual_shape, 
@@ -64,9 +59,9 @@ class Environment:
             
             self.targets.append({'id': body_id, 'pos': candidate_pos, 'detected': False, 'delivered': False})
             created_count += 1
-            attempts = 0 # Reseta tentativas para o próximo ponto
+            attempts = 0 
 
-        print(f"[AMBIENTE] Gerados {created_count} alvos de forma inteligente.")
+        print(f"[AMBIENTE] Gerados {created_count} esferas de entrega.")
         if created_count < count:
             print("[AVISO] Área muito pequena para essa quantidade de restrições.")
 

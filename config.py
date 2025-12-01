@@ -4,7 +4,7 @@ GRAVITY = -9.8
 
 # Configurações do Drone
 DETECTION_RADIUS = 3.0  # Raio do sensor (metros)
-FLIGHT_SPEED = 2.0      # Velocidade de deslocamento
+FLIGHT_SPEED = 15.0      # Velocidade de deslocamento
 ARRIVAL_THRESHOLD = 0.5 # Distância para considerar "chegou"
 
 # Posições (X, Y, Z)

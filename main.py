@@ -3,7 +3,7 @@ import time
 import config
 from modules.environment import Environment
 from modules.drone_controller import Drone
-from modules.planner import optimize_route, generate_patrol_grid, calculate_distance
+from modules.planner import optimize_route, generate_patrol_grid
 from modules.telemetry import MqttHandler
 
 def main():
@@ -13,15 +13,14 @@ def main():
     
     # 2. Configura Ambiente
     env = Environment()
-    # Aumentei para 15 alvos espalhados em uma área de 10x10
-    env.setup_smart_targets(count=100, area_size=20) 
+    # Usando 100 alvos conforme seu código anterior
+    env.setup_smart_targets(count=100, area_size=15) 
     
     drone = Drone(config.BASE_POS)
     mqtt = MqttHandler()
     
-    # 3. Gera Rota de Patrulha (Grid de busca)
-    # O drone vai voar nesses pontos para tentar achar as caixas
-    patrol_waypoints = generate_patrol_grid(area_size=21, height=2, step=4)
+    # 3. Gera Rota de Patrulha
+    patrol_waypoints = generate_patrol_grid(area_size=16, height=2, step=4)
     current_patrol_index = 0
     
     print(f"--- Simulação Iniciada ---")
@@ -32,73 +31,72 @@ def main():
         current_pos = drone.get_position()
         
         # --- LÓGICA DE ESTADO ---
-        # Prioridade 1: Se tem entregas na fila, FAÇA AS ENTREGAS (Modo Delivery)
         if drone.route_queue:
             mode = "DELIVERY"
+            # O alvo é o primeiro da fila.
+            # Graças à lógica abaixo, a fila só é reordenada quando completamos uma tarefa.
             drone.current_target = drone.route_queue[0]
             
-        # Prioridade 2: Se não tem entregas, CONTINUE A PATRULHA (Modo Patrol)
         elif current_patrol_index < len(patrol_waypoints):
             mode = "PATROL"
             drone.current_target = patrol_waypoints[current_patrol_index]
             
-        # Prioridade 3: Acabou a patrulha e as entregas, VOLTE PRA BASE
         else:
             mode = "RETURNING"
             drone.current_target = config.BASE_POS
 
         # --- 1. SENSOR & DETECÇÃO ---
-        # Escaneia o ambiente
         visible_targets = drone.scan_for_targets(env.targets)
         
         if visible_targets:
-            # REGRA DO USUÁRIO: Detectar no máximo 2 pontos novos por vez
-            # Se achou 5, pega só os 2 primeiros para simular "capacidade do sensor"
             new_batch = visible_targets[:2] 
             
-            print(f"[EVENTO] Sensor ativo! Detectados {len(new_batch)} alvos neste ponto.")
-            
-            detected_any = False
+            detected_new = False
             for t_obj in new_batch:
-                env.mark_detected(t_obj['id']) # Muda cor no PyBullet
+                env.mark_detected(t_obj['id']) 
                 
-                # Só adiciona se ainda não estava na fila
                 if t_obj['pos'] not in drone.route_queue:
+                    # REGRA 3: Apenas armazena!
                     drone.route_queue.append(t_obj['pos'])
-                    detected_any = True
-
-            # Se detectou algo novo, OTIMIZA A ROTA IMEDIATAMENTE
-            if detected_any:
-                drone.route_queue = optimize_route(current_pos, drone.route_queue, config.BASE_POS)
+                    detected_new = True
+            
+            if detected_new:
+                # REGRA 3: O drone NÃO interrompe a missão atual.
+                # Removemos o optimize_route daqui.
+                print(f"[MEMÓRIA] Novos pontos salvos na fila. Mantendo rota atual...")
 
         # --- 2. MOVIMENTAÇÃO ---
         arrived = drone.move_step()
         
         if arrived:
-            # Caso A: Chegou num ponto de ENTREGA
             if mode == "DELIVERY":
                 print(f"[AÇÃO] Entrega realizada em: {drone.current_target}")
                 env.mark_delivered(drone.current_target)
-                drone.route_queue.pop(0) # Remove da fila
                 
-                # Se ainda houver entregas, re-otimiza baseado na nova posição
+                # Remove o ponto atual da fila
+                drone.route_queue.pop(0) 
+                
+                # REGRA 4: Replanejamento parcial
+                # Agora que terminou a tarefa atual, ele reavalia o futuro.
                 if drone.route_queue:
+                    print("[CÉREBRO] Entrega concluída. Recalculando melhor rota para os restantes...")
                     drone.route_queue = optimize_route(current_pos, drone.route_queue, config.BASE_POS)
 
-            # Caso B: Chegou num ponto de PATRULHA
             elif mode == "PATROL":
-                # Apenas avança para o próximo waypoint de patrulha
                 current_patrol_index += 1
+                
+                # Se durante essa perna da patrulha ele coletou pontos na memória,
+                # agora é a hora de otimizar antes de começar o modo DELIVERY no próximo loop.
+                if drone.route_queue:
+                    print("[CÉREBRO] Fim do trecho de patrulha. Iniciando entregas otimizadas.")
+                    drone.route_queue = optimize_route(current_pos, drone.route_queue, config.BASE_POS)
             
-            # Caso C: Voltou pra Base
             elif mode == "RETURNING":
                 print("--- Missão Completa: Drone pousado ---")
-                # Reinicia ou encerra (aqui só avisa e dorme)
                 time.sleep(2)
                 break
 
         # --- 3. TELEMETRIA ---
-        # Envia dados para o Node-RED
         mqtt.send_data(mode, current_pos, drone.current_target, len(drone.route_queue))
 
         time.sleep(config.TIME_STEP)
