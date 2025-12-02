@@ -15,7 +15,7 @@ def main():
     
     # 2. Configura Ambiente
     env = Environment()
-    env.setup_smart_targets(count=100, area_size=12) 
+    env.setup_smart_targets(count=100, area_size=16) 
     
     drone = Drone(config.BASE_POS)
     mqtt = MqttHandler()
@@ -36,7 +36,7 @@ def main():
     vel_history = [] 
     
     # Rota Inicial
-    patrol_waypoints = generate_patrol_grid(area_size=13, height=2, step=4)
+    patrol_waypoints = generate_patrol_grid(area_size=17, height=2, step=4)
     current_patrol_index = 0
     
     # CONTADOR PARA REDUZIR LAG (Anti-Flood)
