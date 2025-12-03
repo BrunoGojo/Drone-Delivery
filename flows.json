@@ -1,0 +1,443 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "3cc11d24.ff01a2",
+        "type": "comment",
+        "z": "f6f2187d.f17ca8",
+        "name": "WARNING: please check you have started this container with a volume that is mounted to /data\\n otherwise any flow changes are lost when you redeploy or upgrade the container\\n (e.g. upgrade to a more recent node-red docker image).\\n  If you are using named volumes you can ignore this warning.\\n Double click or see info side panel to learn how to start Node-RED in Docker to save your work",
+        "info": "\nTo start docker with a bind mount volume (-v option), for example:\n\n```\ndocker run -it -p 1880:1880 -v /home/user/node_red_data:/data --name mynodered nodered/node-red\n```\n\nwhere `/home/user/node_red_data` is a directory on your host machine where you want to store your flows.\n\nIf you do not do this then you can experiment and redploy flows, but if you restart or upgrade the container the flows will be disconnected and lost. \n\nThey will still exist in a hidden data volume, which can be recovered using standard docker techniques, but that is much more complex than just starting with a named volume as described above.",
+        "x": 350,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "6ef44dcab7da5ce9",
+        "type": "mqtt in",
+        "z": "f6f2187d.f17ca8",
+        "name": "Dashboard",
+        "topic": "drone/telemetry",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "15ddfba0a5b49fa9",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 220,
+        "y": 200,
+        "wires": [
+            [
+                "39a45f82f837807e"
+            ]
+        ]
+    },
+    {
+        "id": "39a45f82f837807e",
+        "type": "json",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 470,
+        "y": 200,
+        "wires": [
+            [
+                "aeeeb9f8c5c7e5de"
+            ]
+        ]
+    },
+    {
+        "id": "aeeeb9f8c5c7e5de",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "function 1",
+        "func": "// 1. Proteção de Segurança\n// Se o Python mandar um dado quebrado, a gente ignora para não travar o Dashboard\nif (!msg.payload || !msg.payload.stats || !msg.payload.position) {\n    return null;\n}\n\nvar dados = msg.payload;\n\n// --- PREPARAÇÃO DAS SAÍDAS ---\n\n// Saída 1: Texto do Status\nvar msg1 = { payload: dados.state };\n\n// Saída 2: O Mapa Completo (Objeto especial para o Template desenhar)\n// Verifica se existe a lista de visitados, se não, manda vazio\nvar listaVisitados = (dados.map && dados.map.visited) ? dados.map.visited : [];\nvar msg2 = { payload: {\n    drone: { x: dados.position.x, y: dados.position.y },\n    visited: listaVisitados\n}};\n\n// Saída 3: Replanejamentos\nvar msg3 = { payload: dados.stats.replan };\n\n// Saída 4: Distância\nvar msg4 = { payload: dados.stats.dist };\n\n// Saída 5: Energia\nvar msg5 = { payload: dados.stats.energy };\n\n// Saída 6: Pendentes\nvar msg6 = { payload: dados.stats.pending };\n\n// Saída 7: Eficiência\nvar msg7 = { payload: dados.stats.efficiency };\n\n// Saída 8: Tempo Médio\nvar msg8 = { payload: dados.stats.avg_time };\n\n// Saída 9: Estabilidade de Velocidade (Agora com ruído do Python)\nvar msg9 = { payload: dados.stats.stability_v };\n\n// Envia tudo para os 9 pinos\nreturn [msg1, msg2, msg3, msg4, msg5, msg6, msg7, msg8, msg9];",
+        "outputs": 9,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 200,
+        "wires": [
+            [
+                "763d5aa0dce60b31"
+            ],
+            [
+                "fe4cd4559eb186a9"
+            ],
+            [
+                "cc45dc43041d46e4"
+            ],
+            [
+                "5e778e612d0bdad0"
+            ],
+            [
+                "7e6a229f75acfcc0"
+            ],
+            [
+                "f689e33df0810c06"
+            ],
+            [
+                "cdec09cb6190bae0"
+            ],
+            [
+                "24e3c3394b3ba980"
+            ],
+            [
+                "688fb927b4e45aec",
+                "a42521816ec70eb4"
+            ]
+        ]
+    },
+    {
+        "id": "763d5aa0dce60b31",
+        "type": "ui_text",
+        "z": "f6f2187d.f17ca8",
+        "group": "d1cebddf22a77e90",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Modo Atual",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 890,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "cc45dc43041d46e4",
+        "type": "ui_text",
+        "z": "f6f2187d.f17ca8",
+        "group": "d1cebddf22a77e90",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Replanejamentos",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 910,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "5e778e612d0bdad0",
+        "type": "ui_text",
+        "z": "f6f2187d.f17ca8",
+        "group": "d1cebddf22a77e90",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Distância(m)",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 890,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "7e6a229f75acfcc0",
+        "type": "ui_gauge",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "225d44793b56ac1e",
+        "order": 6,
+        "width": "6",
+        "height": "4",
+        "gtype": "gage",
+        "title": "Energia(J)",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "10000",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 890,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "f689e33df0810c06",
+        "type": "ui_gauge",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "225d44793b56ac1e",
+        "order": 4,
+        "width": "6",
+        "height": "4",
+        "gtype": "donut",
+        "title": "Pendentes",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "4",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 890,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "fe4cd4559eb186a9",
+        "type": "ui_template",
+        "z": "f6f2187d.f17ca8",
+        "group": "274263820ae3cbf4",
+        "name": "Mapa de Voo",
+        "order": 0,
+        "width": "12",
+        "height": "8",
+        "format": "<div style=\"width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:#1a1a1a; border-radius:4px;\">\n    <canvas id=\"droneMap\" width=\"600\" height=\"400\" style=\"background:radial-gradient(circle, #2a2a2a 0%, #111 100%); border:1px solid #444;\"></canvas>\n</div>\n\n<script>\n(function(scope) {\n    var range = 18; // Zoom do mapa (-15 a +15 metros)\n    var canvas = document.getElementById('droneMap');\n    var ctx = canvas.getContext('2d');\n    var trail = []; \n    \n    scope.$watch('msg', function(msg) {\n        if (!msg || !msg.payload || !msg.payload.drone) return;\n        \n        var dronePos = msg.payload.drone;\n        var visitedList = msg.payload.visited; // Pega a lista de pontos\n        \n        var x = parseFloat(dronePos.x);\n        var y = parseFloat(dronePos.y);\n        \n        // Escala\n        var w = canvas.width;\n        var h = canvas.height;\n        var scaleX = w / (range * 2);\n        var scaleY = h / (range * 2);\n        \n        // Função auxiliar para converter Metros -> Pixels\n        function toMap(mx, my) {\n            return {\n                x: (w / 2) + (mx * scaleX),\n                y: (h / 2) - (my * scaleY)\n            };\n        }\n        \n        var droneMap = toMap(x, y);\n        \n        // Adiciona ao rastro\n        trail.push(droneMap);\n        if(trail.length > 200) trail.shift();\n        \n        // --- DESENHO ---\n        ctx.clearRect(0, 0, w, h);\n        \n        // 1. Grade\n        ctx.strokeStyle = \"#333\";\n        ctx.lineWidth = 1;\n        ctx.beginPath();\n        ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);\n        ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);\n        ctx.stroke();\n\n        // 2. DESENHAR PONTOS VISITADOS (NOVO)\n        if(visitedList && visitedList.length > 0) {\n            ctx.fillStyle = \"#00ff00\"; // Verde Neon\n            ctx.shadowBlur = 5;\n            ctx.shadowColor = \"#00ff00\";\n            \n            for(var i=0; i<visitedList.length; i++) {\n                var p = visitedList[i];\n                // p[0] é X, p[1] é Y\n                var pMap = toMap(p[0], p[1]);\n                \n                ctx.beginPath();\n                ctx.arc(pMap.x, pMap.y, 3, 0, 2*Math.PI); // Bolinha de raio 3\n                ctx.fill();\n            }\n            ctx.shadowBlur = 0; // Reseta brilho\n        }\n        \n        // 3. Rastro\n        if(trail.length > 0){\n            ctx.strokeStyle = \"#0094ce\"; // Azul\n            ctx.lineWidth = 2;\n            ctx.beginPath();\n            ctx.moveTo(trail[0].x, trail[0].y);\n            for(var i=1; i<trail.length; i++){\n                ctx.lineTo(trail[i].x, trail[i].y);\n            }\n            ctx.stroke();\n        }\n        \n        // 4. Drone Atual\n        ctx.fillStyle = \"#fff\";\n        ctx.beginPath();\n        ctx.arc(droneMap.x, droneMap.y, 5, 0, 2*Math.PI);\n        ctx.fill();\n        \n        // 5. Texto\n        ctx.fillStyle = \"#fff\";\n        ctx.font = \"12px monospace\";\n        ctx.fillText(\"X: \" + x.toFixed(1) + \"m\", 10, 20);\n        ctx.fillText(\"Y: \" + y.toFixed(1) + \"m\", 10, 35);\n        ctx.fillStyle = \"#00ff00\";\n        ctx.fillText(\"Visitados: \" + (visitedList ? visitedList.length : 0), 10, 50);\n    });\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 890,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "cdec09cb6190bae0",
+        "type": "ui_gauge",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "225d44793b56ac1e",
+        "order": 2,
+        "width": "6",
+        "height": "4",
+        "gtype": "gage",
+        "title": "Eficiência de Rota",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#ff0000",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "50",
+        "seg2": "80",
+        "diff": false,
+        "className": "",
+        "x": 910,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "24e3c3394b3ba980",
+        "type": "ui_text",
+        "z": "f6f2187d.f17ca8",
+        "group": "d1cebddf22a77e90",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Tempo Médio/Ponto",
+        "format": "{{msg.payload}} s",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 920,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "688fb927b4e45aec",
+        "type": "ui_chart",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "bd2b19b4b9a3e4a1",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "Estabilidade Velocidade",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "-8",
+        "ymax": "8",
+        "removeOlder": "15",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "1",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 930,
+        "y": 440,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a42521816ec70eb4",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 880,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "15ddfba0a5b49fa9",
+        "type": "mqtt-broker",
+        "name": "Dashboard",
+        "broker": "host.docker.internal",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "d1cebddf22a77e90",
+        "type": "ui_group",
+        "name": "Status",
+        "tab": "6477e35a979ee915",
+        "order": 4,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "225d44793b56ac1e",
+        "type": "ui_group",
+        "name": "Métricas",
+        "tab": "6477e35a979ee915",
+        "order": 3,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "274263820ae3cbf4",
+        "type": "ui_group",
+        "name": "Navegação",
+        "tab": "6477e35a979ee915",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "bd2b19b4b9a3e4a1",
+        "type": "ui_group",
+        "name": "Técnico",
+        "tab": "6477e35a979ee915",
+        "order": 2,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "6477e35a979ee915",
+        "type": "ui_tab",
+        "name": "Dados",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "22fd0969dcb0d1e0",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6"
+        }
+    }
+]
