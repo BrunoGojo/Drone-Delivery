@@ -92,11 +92,15 @@ dados para o supervisório.
 ## 🚀 Instalação
 
 ### 1️⃣ MQTT Broker
+Verifique se o Mosquitto está rodando:
+Windows: Serviços → Mosquitto Broker → Iniciado
+Docker: use esta configuração mínima no mosquitto.conf
 
     listener 1883
     allow_anonymous true
 
 ### 2️⃣ Ambiente Python
+Abra o terminal na pasta do projeto:
 
     python -m venv venv
     .env\Scriptsctivate
