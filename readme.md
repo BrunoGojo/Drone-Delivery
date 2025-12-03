@@ -62,7 +62,7 @@ dados para o supervisório.
 
 ## 📂 Estrutura do Projeto
 
-    projeto_drone/
+    drone_new/
     │
     ├── main.py
     ├── config.py
